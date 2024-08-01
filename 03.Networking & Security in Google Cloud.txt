@@ -1,0 +1,620 @@
+--------------------------------------------------------------------------
+1.Google Cloud Computing Foundations: Networking & Security in Google Cloud學習筆記
+--------------------------------------------------------------------------
+課程連結
+https://www.cloudskillsboost.google/paths/36/course_templates/155
+--------------------------------------------------------------------------
+
+
+
+
+
+--------------------------------------------
+[DEPRECATED] Multiple VPC Networks
+--------------------------------------------
+1. Create custom mode VPC networks with firewall rules
+	---Create the managementnet network
+按系統 --> VPC network --> VPC networks --> Create VPC Network.
+	Name : managementnet
+	Subnet creation mode : Custom
+	New subnet
+		Name:managementsubnet-us-east1
+		Region:us-east1
+		IPv4 range:10.130.0.0/20
+	Done
+	EQUIVALENT COMMAND LINE
+	*These commands illustrate that networks and subnets can be created using the Cloud Shell command line. You will create the privatenet network using these commands with similar parameters.
+		這兩筆等等會用
+		gcloud compute networks create managementnet --project=qwiklabs-gcp-00-f5b2b10e49c1 --subnet-mode=custom --mtu=1460 --bgp-routing-mode=regional
+		gcloud compute networks subnets create managementsubnet-us-east1 --project=qwiklabs-gcp-00-f5b2b10e49c1 --range=10.130.0.0/20 --stack-type=IPV4_ONLY --network=managementnet --region=us-east1
+	Close
+	Create
+	---Create the privatenet network
+gcloud compute networks create privatenet --subnet-mode=custom	
+	---create the privatesubnet-us-east1 subnet
+gcloud compute networks subnets create privatesubnet-us-east1 --network=privatenet --region=us-east1 --range=172.16.0.0/24
+	---create the privatesubnet-us-central1 subnet
+gcloud compute networks subnets create privatesubnet-us-central1 --network=privatenet --region=us-central1 --range=172.20.0.0/20
+	---list the available VPC networks
+gcloud compute networks list
+	---list the available VPC subnets (sorted by VPC network)
+gcloud compute networks subnets list --sort-by=NETWORK
+	---按系統 看結果
+VPC network --> VPC networks 
+	---Create the firewall rules for managementnet按系統
+VPC network --> Firewall --> +Create Firewall Rule
+	Name:managementnet-allow-icmp-ssh-rdp
+	Network:managementnet
+	Targets:All instances in the network
+	Source filter:IPv4 Ranges
+	Source IPv4 ranges:0.0.0.0/0
+	Protocols and ports:
+		Specified protocols and ports, 
+		打勾 tcp 
+			port:22, 3389
+		打勾 Other 
+			protocols: icmp
+	EQUIVALENT COMMAND LINE
+	*These commands illustrate that firewall rules can also be created using the Cloud Shell command line. You will create the privatenet's firewall rules using these commands with similar parameters.
+		這筆等等會用
+		gcloud compute --project=qwiklabs-gcp-00-f5b2b10e49c1 	firewall-rules create managementnet-allow-icmp-ssh-rdp --direction=INGRESS --priority=1000 --network=managementnet --action=ALLOW --rules=tcp:22,tcp:3389,icmp --source-ranges=0.0.0.0/0
+	Close
+	Create
+	---Create the firewall rules for privatenet
+gcloud compute firewall-rules create privatenet-allow-icmp-ssh-rdp --direction=INGRESS --priority=1000 --network=privatenet --action=ALLOW --rules=icmp,tcp:22,tcp:3389 --source-ranges=0.0.0.0/0
+	--- list all the firewall rules (sorted by VPC network)
+gcloud compute firewall-rules list --sort-by=NETWORK
+	---按系統 看結果
+VPC network --> Firewall
+	
+2. Create VM instances
+	---Create the managementnet-us-east1-vm instance按系統
+Compute Engine --> VM instances --> Create instance
+	Name:managementnet-us-east1-vm
+	Region:us-east1
+	Zone:us-east1-d
+	Series:E2
+	Machine type:e2-micro
+	Advanced options --> Networking --> Network interfaces
+		Network:managementnet
+		Subnetwork:managementsubnet-us-east1
+	Done
+	EQUIVALENT CODE
+	*This illustrate that VM instances can also be created using the Cloud Shell command line. You will create the privatenet-us-east1-vm instance using these commands with similar parameters.
+		gcloud compute instances create managementnet-us-east1-vm --project=qwiklabs-gcp-00-f5b2b10e49c1 --zone=us-east1-d --machine-type=e2-micro --network-interface=network-tier=PREMIUM,stack-type=IPV4_ONLY,subnet=managementsubnet-us-east1 --metadata=enable-oslogin=true --maintenance-policy=MIGRATE --provisioning-model=STANDARD --service-account=90351695094-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --create-disk=auto-delete=yes,boot=yes,device-name=managementnet-us-east1-vm,image=projects/debian-cloud/global/images/debian-11-bullseye-v20231212,mode=rw,size=10,type=projects/qwiklabs-gcp-00-f5b2b10e49c1/zones/us-east1-d/diskTypes/pd-standard --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --labels=goog-ec-src=vm_add-gcloud --reservation-affinity=any
+	Create
+	---create the privatenet-us-east1-vm instance
+gcloud compute instances create privatenet-us-east1-vm --zone=us-east1-d --machine-type=e2-micro --subnet=privatesubnet-us-east1
+	--- list all the VM instances (sorted by zone)
+gcloud compute instances list --sort-by=ZONE
+	---按系統 看結果
+Compute Engine --> VM instances
+	
+3. Explore the connectivity between VM instances
+	---按系統Ping the external IP addresses
+Compute Engine --> VM instances --> mynet-us-east1-vm 按 SSH 
+	---To test connectivity to mynet-us-central1-vm's external IP, run the following command, replacing mynet-us-central1-vm's external IP，
+	---語法 ping -c 3 'Enter mynet-us-central1-vm external IP here'
+ping -c 3 '34.134.39.128'
+	---To test connectivity to managementnet-us-east1-vm's external IP, run the following command, replacing managementnet-us-east1-vm's external IP
+	---語法 ping -c 3 'Enter managementnet-us-east1-vm external IP here'
+ping -c 3 '34.148.143.196'
+	---Ping the internal IP addresses
+	---To test connectivity to mynet-us-central1-vm's internal IP, run the following command, replacing mynet-us-central1-vm's internal IP:
+	---ping -c 3 'Enter mynet-us-central1-vm internal IP here'
+ping -c 3 '10.128.0.2'
+
+4. Create a VM instance with multiple network interfaces
+	---按系統Create the VM instance with multiple network interfaces
+Compute Engine --> VM instances --> Create instance
+	Name:vm-appliance
+	Region:us-east1
+	Zone:us-east1-d
+	Series:E2
+	Machine type:e2-standard-4
+	Advanced options --> Networking --> Network interfaces
+		Network:privatenet
+		Subnetwork:privatesubnet-us-east1
+	Done
+	Add network interface
+		Network:managementnet
+		Subnetwork:managementsubnet-us-east1
+	Done
+	Add network interface
+		Network:mynetwork
+		Subnetwork:mynetwork
+	Done
+	Create
+	---Explore the network interface details按系統
+Compute Engine --> VM instances -->Click nic0 within the Internal IP address of vm-appliance to open the Network interface details page.
+	---list the network interfaces within the VM instance
+sudo ifconfig
+	---Explore the network interface connectivity按系統
+Compute Engine --> VM instances --> vm-appliance 按 SSH 
+	---To test connectivity to privatenet-Region-vm's internal IP, run the following command, replacing privatenet-Region-vm's internal IP
+	---語法ping -c 3 Enter privatenet-us-east1-vm's internal IP here
+ping -c 3 172.16.0.2
+	---Repeat the same test
+ping -c 3 privatenet-us-east1-vm
+	---list the routes for vm-appliance instance
+ip route
+
+
+
+--------------------------------------------
+VPC Networks - Controlling Access
+--------------------------------------------
+1. Create the web servers
+	*In this section, you will create two web servers (blue and green) in the default VPC network. Then, you will install nginx on the web servers and modify the welcome page to distinguish the servers.
+	---Create the blue server按系統
+Compute Engine --> VM instances --> Create Instance
+	Name	blue
+	Region	us-east1
+	Zone	us-east1-c
+	Advanced Options > Networking
+		Network tags:web-server
+	Create
+	---Create the green server
+Compute Engine --> VM instances --> Create Instance	
+	Name	green
+	Region	us-east1
+	Zone	us-east1-c
+	Create
+	---Install nginx and customize the welcome page
+	---VM instances:blue
+click SSH	
+	---install nginx
+sudo apt-get install nginx-light -y
+	---Open the welcome page in the nano editor
+sudo nano /var/www/html/index.nginx-debian.html
+	---修改內容 <h1>Welcome to nginx!</h1> 
+修改後內容 <h1>Welcome to the blue server!</h1>.
+	---CTRL+o, ENTER, 寫入存檔
+CTRL+x 離開
+	---Verify the change
+cat /var/www/html/index.nginx-debian.html
+	---Close the SSH terminal to blue
+exit
+	---VM instances:green
+click SSH	
+	---install nginx
+sudo apt-get install nginx-light -y
+	---Open the welcome page in the nano editor
+sudo nano /var/www/html/index.nginx-debian.html
+	---修改內容 <h1>Welcome to nginx!</h1> 
+修改後內容 <h1>Welcome to the green server!</h1>.
+	---CTRL+o, ENTER, 寫入存檔
+CTRL+x 離開
+	---Verify the change
+cat /var/www/html/index.nginx-debian.html
+	---Close the SSH terminal to blue
+exit
+
+
+2. Create the firewall rule
+	---Create the tagged firewall rule按系統
+VPC network --> Firewall --> Create Firewall Rule
+	Name:allow-http-web-server
+	Network:default
+	Targets:Specified target tags
+	Target tags:web-server
+	Source filter:IPv4 Ranges
+	Source IPv4 ranges:0.0.0.0/0
+	Protocols and ports:Specified protocols and ports
+		check tcp, type: 80
+		check Other protocols, type: icmp
+Create
+	---Create a test-vm
+gcloud compute instances create test-vm --machine-type=e2-micro --subnet=default --zone=us-east1-c
+	---Test HTTP connectivity按系統
+Compute Engine --> VM instances --> (test-vm)click SSH
+	---test HTTP connectivity to blue's internal IP
+	---語法curl <Enter blue's internal IP here>
+curl 10.142.0.2
+	---test HTTP connectivity to green's internal IP
+	---語法curl -c 3 <Enter green's internal IP here>
+curl -c 3 10.142.0.3
+	---test HTTP connectivity to blue's external IP
+	---語法curl <Enter blue's external IP here>
+curl 34.148.9.91
+	-test HTTP connectivity to green's external IP
+	---語法curl -c 3 <Enter green's external IP here>
+curl -c 3 35.185.101.146
+	---Press CTRL+c to stop the HTTP request
+CTRL+c
+
+
+3. Explore the Network and Security Admin roles
+	*Network Admin: Permissions to create, modify, and delete networking resources, except for firewall rules and SSL certificates.
+	*Security Admin: Permissions to create, modify, and delete firewall rules and SSL certificates.
+	---Verify current permissions
+	---Try to list or delete the available firewall rules from test-vm
+Compute Engine --> VM instances --> 點選(test-vm)SSH
+	--- list the available firewall rules
+gcloud compute firewall-rules list
+	*結果如下為正常
+		ERROR: (gcloud.compute.firewall-rules.list) Some requests did not succeed:
+		- Insufficient Permission
+	---delete the allow-http-web-server firewall rule
+gcloud compute firewall-rules delete allow-http-web-server
+	---Y, if asked to continue
+Y
+	*結果如下為正常
+		ERROR: (gcloud.compute.firewall-rules.delete) Could not fetch resource:
+		- Insufficient Permission
+	---Create a service account按系統
+IAM & admin --> Service Accounts --> Create service account
+	Service account name:Network-admin 
+	CREATE AND CONTINUE
+	Select a role:
+		select Compute Engine --> Compute Network Admin 
+	CONTINUE 
+DONE
+選(Network-admin) 右方Actions的 three dots 選 Manage Keys --> Add Key --> Create new key --> JSON --> create --> 下載儲存檔案 --> close --> 重新命名 credentials.json
+	---Authorize test-vm and verify permissions
+Compute Engine --> VM instances --> 點選(test-vm)SSH -->(上方) Upload file -->選剛剛下載的檔案 credentials.json -->upload files  
+	---Authorize the VM with the credentials you just uploaded
+gcloud auth activate-service-account --key-file credentials.json
+	--- list the available firewall rules
+gcloud compute firewall-rules list
+	---delete the allow-http-web-server firewall rule
+gcloud compute firewall-rules delete allow-http-web-server
+	---Y, if asked to continue
+Y
+	*結果如下為正常
+		ERROR: (gcloud.auth.activate-service-account) Unable to read file [credentials.json]: [Errno 2] No such file or directory: 'credentials.json'
+	---Update service account and verify permissions
+IAM & admin --> IAM --> (Name)Network-admin (點旁邊的筆)Edit principal -->修改Role: (Compute Engine)Compute Security Admin -->Save
+	---Return to the SSH terminal of the test-vm instance
+Compute Engine --> VM instances --> 點選(test-vm)SSH
+	---list the available firewall rules，結果會成功顯示
+gcloud compute firewall-rules list
+	---delete the allow-http-web-server firewall rule
+gcloud compute firewall-rules delete allow-http-web-server
+	---Y, if asked to continue，結果會正常刪除
+Y
+	---Verify the deletion of the firewall rule
+	---語法curl -c 3 <Enter blue's external IP here>
+curl -c 3 35.196.5.203
+	*Note: This should not work!
+	---Press CTRL+c to stop the HTTP request
+CTRL+c 
+	*Note: Provide the Security Admin role to the right user or service account to avoid any unwanted changes to your firewall rules!
+
+
+--------------------------------------------
+HTTP Load Balancer with Cloud Armor
+--------------------------------------------
+1. Configure HTTP and health check firewall rules
+	---Create the HTTP firewall rule按系統
+VPC network --> Firewall -->Create Firewall Rule
+	Name:default-allow-http
+	Network:default
+	Targets:Specified target tags
+	Target tags:http-server
+	Source filter:IPv4 Ranges
+	Source IPv4 ranges:0.0.0.0/0
+	Protocols and ports:
+		Specified protocols and ports
+		check TCP, type: 80
+Create
+	---Create the health check firewall rules
+VPC network --> Firewall -->Create Firewall Rule
+	Name:default-allow-health-check
+	Network:default
+	Targets:Specified target tags
+	Target tags:http-server
+	Source filter:IPv4 Ranges
+	Source IPv4 ranges:130.211.0.0/22, 35.191.0.0/16
+	Protocols and ports:
+	Specified protocols and ports,
+		check TCP
+Create
+
+2. Configure instance templates and create instance groups
+	---Configure the instance templates
+Compute Engine --> Instance templates --> Create instance template
+	Name:us-central1-template
+	Series: E2
+	Machine Type: e2-micro
+	Advanced Options
+	-->Networking
+		Network tags:http-server
+		Network interfaces
+			Network:default
+			Subnetwork:default us-central1
+		Done
+	-->Management 
+		Metadata --> + ADD ITEM
+			key:startup-script-url
+			value:gs://cloud-training/gcpnet/httplb/startup.sh
+Create
+	--- create another instance template for subnet-b by copying us-central1-template
+點開剛剛創的us-central1-template--> (上方)+CREATE SIMILAR
+	Name:us-east4-template
+	Advanced Options
+	-->Networking
+		Network tags:http-server
+		Network interfaces
+			Network:default
+			Subnetwork:default (us-east4)
+		Done
+Create
+	---Create the managed instance groups(us-central1)
+Compute Engine --> Instance groups -->Create instance group
+	Name:us-central1-mig	
+	Instance template:us-central1-template
+	Location:Multiple zones	
+	Region:us-central1
+	(Autoscaling)Minimum number of instances:1
+	(Autoscaling)Maximum number of instances:2
+	Autoscaling signals 
+		Signal type:CPU utilization
+		Target CPU utilization:80
+	Done.
+	Initialization period:45
+Create
+	---Create the managed instance groups(us-east4)
+Compute Engine --> Instance groups -->Create instance group
+	Name:us-east4-mig
+	Instance template:us-east4-template
+	Location:Multiple zones	
+	Region:	us-east4
+	(Autoscaling)Minimum number of instances:1
+	(Autoscaling)Maximum number of instances:2
+	Autoscaling signals 
+		Signal type:CPU utilization
+		Target CPU utilization:80
+	Done.
+	Initialization period:45
+Create
+	---Verify the backends
+Compute Engine --> VM instances --> (us-central1-mig)External IP
+	*You should see the Client IP (your IP address), the Hostname (starts with us-central1-mig) and the Server Location (a zone in us-central1).
+
+3. Configure the HTTP Load Balancer
+	---Start the configuration
+Network Services --> Load balancing --> Create load balancer
+	Application Load Balancer (HTTP/S)--> Start configuration -->From Internet to my VMs or serverless services -->Continue
+		Load Balancer Name : http-lb
+		---Configure the frontend
+		(Frontend configuration)
+			Protocol:HTTP
+			IP version:IPv4
+			IP address:Ephemeral
+			Port:80
+		Done
+		Add Frontend IP and port
+			Protocol:HTTP
+			IP version:IPv6
+			IP address:Auto-allocate
+			Port:80
+		Done
+		---Configure the backend
+		(Backend configuration)
+		Backend services & backend buckets--> Create a backend service
+			Name:http-backend
+			(Backends)Regions
+			Instance group:us-central1-mig
+				Port numbers:80
+				Balancing mode:Rate
+				Maximum RPS:50
+				Capacity:100
+			Done
+			Add a backend
+				Instance group:us-east4-mig
+				Port numbers:80
+				Balancing mode:Utilization
+				Maximum backend utilization:80
+				Capacity:100
+			Done
+		Health Check--> Create a health check
+			Name:http-health-check
+			Protocol:TCP
+			Port:80
+		Save
+		打勾Check the Enable Logging
+			Sample Rate to 1
+		Create 
+		Ok
+		---Review and create the HTTP Load Balancer
+		(Review and finalize)確認剛剛的新建資料
+Create
+
+
+4. Test the HTTP Load Balancer
+	---Access the HTTP Load Balancer
+點開http-lb -->(Frontend) IP:Port 複製網址到瀏覽器看結果
+34.36.228.19:80(等等會用到)
+	---Stress test the HTTP Load Balancer
+Compute Engine --> VM instances -->Create instance
+	Name:siege-vm
+	Region:europe-west4
+	Zone:europe-west4-b
+	Series:E2
+Create
+	---siege-vm instance
+(siege-vm) SSH
+	---install siege
+sudo apt-get -y install siege
+	---store the IPv4 address of the HTTP Load Balancer in an environment variable
+	---語法export LB_IP=[LB_IP_v4]
+export LB_IP=34.36.228.19:80
+	---simulate a load
+siege -c 150 -t120s http://$LB_IP
+	---切到系統
+Network Services --> Load balancing -->Backends -->http-backend --> http-lb -->Monitoring 
+	*Monitor the Frontend Location (Total inbound traffic) between North America and the two backends for 2 to 3 minutes.
+	---切回剛剛的SSH terminal of siege-vm
+	---CTRL+C to stop siege
+
+
+5. Denylist the siege-vm
+	---Create the security policy
+Compute Engine --> VM instances-->查看External IP of the siege-vm (34.91.150.166) 
+Network Security --> Cloud Armor Policies-->Create policy
+	Name:denylist-siege
+	Default rule action:Allow
+Next step
+Add a rule
+	Condition > Match: Enter the SIEGE_IP(剛剛的ip)34.91.150.166
+	Action:Deny
+	Response code:403 (Forbidden)
+	Priority:1000
+Done
+Next step
+Next step
+	Type: Load balancer backend service	
+	Target: http-backend
+Create policy
+	---Verify the security policy
+	---切回剛剛的SSH terminal of siege-vm
+	---access the load balancer
+curl http://$LB_IP
+	---simulate a load
+siege -c 150 -t120s http://$LB_IP
+	---切到系統
+Network Security --> Cloud Armor Policies -->denylist-siege -->Logs-->View policy logs
+	*On the Logging page, make sure to clear all the text in the Query preview. 
+Select resource to Application Load Balancer --> http-lb-forwarding-rule --> http-lb --> Apply -->Run Query
+查看檔案-->點開箭號 展開內容
+	-->httpRequest
+		*The request should be from the siege-vm IP address. If not, expand another log entry.
+	-->jsonPayload--> enforcedSecurityPolicy
+		*Notice that the configuredAction is to DENY with the name denylist-siege
+
+
+
+--------------------------------------------
+Cloud Monitoring: Qwik Start
+--------------------------------------------
+1. Create a Compute Engine instance
+Compute Engine --> VM instances --> Create instance
+	Name	lamp-1-vm
+	Region	us-central1
+	Zone	us-central1-c
+	Series	E2
+	Machine type	e2-medium
+	Boot disk	Debian GNU/Linux 11 (bullseye)
+	Firewall	Check Allow HTTP traffic
+Create
+
+2. Add Apache2 HTTP Server to your instance
+點開 (lamp-1-vm) SSH
+	--- set up Apache2 HTTP Server
+sudo apt-get update
+sudo apt-get install apache2 php7.0
+	---continue, enter Y
+Y
+sudo service apache2 restart
+	---切到系統
+VM instances查看lamp-1-vm的External IP(34.68.1.23)
+	---Create a Monitoring Metrics Scope
+(Operations)Monitoring -->Overview
+	---Install the Monitoring and Logging agents
+	---Run the Monitoring agent install script command in the SSH terminal of your VM instance to install the Cloud Monitoring agent，切回剛剛的SSH terminal 
+curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
+sudo bash add-google-cloud-ops-agent-repo.sh --also-install
+	---continue, press Y
+Y
+	---Run the Logging agent install script command in the SSH terminal of your VM instance to install the Cloud Logging agent
+sudo systemctl status google-cloud-ops-agent"*"
+	---Press q to exit the status
+q
+	---更新
+sudo apt-get update
+
+
+3. Create an uptime check
+	---切到系統Monitoring
+(左方)Uptime checks --> (上方)Create Uptime Check
+	(Target)
+		Protocol: HTTP
+		Resource Type: Instance.
+		Instance: lamp-1-vm.
+		Check Frequency:1 minute.
+	Continue
+	(Response Validation)accept the defaults 
+	Continue
+	(Alert & Notification)accept the defaults
+	Continue
+	(Review)
+		Title: Lamp Uptime Check
+		Test
+			*When you see a green check mark everything can connect
+	Create
+
+4. Create an alerting policy
+	---切到系統Monitoring
+(左方)Alerting --> (上方) +Create Policy -->Select a metric 
+	Uncheck the Active
+	filter by resource :Network traffic
+	click on VM instance --> Interface
+		Network traffic (agent.googleapis.com/interface/traffic)  
+			Apply
+		Next
+			Threshold position : Above threshold
+			Threshold value : 500 
+			Advanced Options 
+				Retest window : 1 min. 
+		Next		
+		Notification Channels: Manage Notification Channels
+		Email --> ADD NEW
+			Email Address:student-00-b2f9e8ea25c6@qwiklabs.net
+			Display name:student
+		Save
+		(右上角)close
+		 Notification Channels --> Refresh icon ，看到剛剛新增的資料display name
+			select your Display name 
+			OK
+		Alert name : Inbound Traffic Alert
+		Next
+		---Review the alert 
+		Create Policy
+				
+
+
+5. Create a dashboard and chart
+(左方)Dashboards --> (上方) +Create Dashboard
+	 Dashboard Name(上方重新命名) :Cloud Monitoring LAMP Qwik Start Dashboard
+	---Add the first chart
+ADD WIDGET -->(Visualization)Line 
+	(右)Widget title: CPU Load
+	(上)Select a Metric :Uncheck the Active.
+		filter: CPU load (1m) 
+		VM instance --> Cpu
+			Select CPU load (1m) 
+			Apply(右下角)
+		Apply(右上角)
+	---Add the second chart
+ADD WIDGET -->(Visualization)Line
+	(右)Widget title:Received Packets
+	(上)Metric :Uncheck the Active
+		filter:Received packets
+		VM instance --> Instance
+			Select Received packets
+			Apply(右下角)
+		Apply(右上角)
+		
+6. View your logs
+Logging --> Logs Explorer
+	---Select the logs you want to see, in this case, you select the logs for the lamp-1-vm instance you created at the start of this lab
+(上排)Resource --> VM Instance > lamp-1-vm --> Apply --> Stream logs
+	---Check out what happens when you start and stop the VM instance(同時開兩個分頁查看Log變化)
+		1.Compute Engine --> right-click VM instances --> Open link in new window -->lamp-1-vm 右邊三個點點click the three vertical dots at the right of the screen 
+			Stop
+				stop
+			去觀察logs那邊
+			Start/resume
+				Start
+		2.Logs Viewer browser window (觀察用，操作stop + 操作start)
+
+
+
+7. Check the uptime check results and triggered alerts
+	--- This view provides a list of all active uptime checks, and the status of each in different locations.
+Monitoring --> Uptime checks --> Lamp Uptime Check
+	---Check if alerts have been triggered
+Monitoring --> Alerting
+	*You see incidents and events listed in the Alerting window.
+	*Check your email account. You should see Cloud Monitoring Alerts.

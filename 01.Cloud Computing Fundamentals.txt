@@ -1,0 +1,861 @@
+--------------------------------------------------------------------------
+1.Google Cloud Computing Foundations: Cloud Computing Fundamentals學習筆記
+--------------------------------------------------------------------------
+課程連結
+https://www.cloudskillsboost.google/paths/36/course_templates/153
+--------------------------------------------------------------------------
+
+---------------------------------------
+新增虛擬主機-按鈕選項版
+Create a new instance from the Cloud console
+https://www.cloudskillsboost.google/focuses/3563?locale=zh_TW&parent=catalog
+---------------------------------------
+1.Cloud 控制台中，依序點選「導覽選單」>「Compute Engine」>「VM 執行個體」
+2.建立執行個體
+3.參數設定
+名稱:gcelab
+區域:東亞
+可用區:asia-east1-a
+系列:E2
+機器類型:2 個 vCPU (這個執行個體是 e2-medium，具備 2 個 CPU 和 4 GB RAM。我們提供多種機器類型，包括 micro 執行個體類型和 32 個核心/208 GB RAM 的執行個體類型。)
+開機磁碟:全新 10 GB 已平衡的永久磁碟 OS 映像檔：Debian GNU/Linux 11 (bullseye)
+防火牆:接受 HTTP 流量(為了存取您在後續步驟安裝的網路伺服器，請選取這個選項。注意：這麼做會自動建立防火牆規則，以便接受通訊埠 80 的 HTTP 流量。)
+4.建立
+
+---------------------------------------
+安裝 NGINX 網路伺服器
+Install an NGINX web server
+---------------------------------------
+0.透過 SSH 連線至虛擬機器
+點選與虛擬機器右邊的「SSH」去下指令
+1.更新作業系統 (agt-get or apt)二擇一，apt比較新.優化版
+sudo apt-get update
+sudo apt update
+2.安裝 NGINX
+sudo apt-get install -y nginx
+sudo apt install -y nginx
+3.確認 NGINX 正在執行中
+ps auwx | grep nginx
+
+---------------------------------------
+新增虛擬主機--下指令版 用gcloud 建立
+Create a new instance with gcloud
+---------------------------------------
+1.使用Cloud Shell，下指令 建立虛擬主機  *名稱gcelab2  *machine-type:e2-medium
+gcloud compute instances create gcelab2 --machine-type e2-medium --zone
+1-1補充.只會在同一個區域/可用區內工作，或不想每次都附加 --zone 標記，預設區域和可用區設為與 gcloud相同
+gcloud config set compute/zone xxxx
+gcloud config set compute/region xxxx
+2.查看所有預設值，退出 help，請按 CTRL + C 鍵
+gcloud compute instances create --help
+3.使用 gcloud 來透過 SSH 連線至執行個體。請務必新增可用區zone (如果已設定通用選項，也可忽略 --zone 標記)
+gcloud compute ssh gcelab2 --zone
+4.輸入 Y 繼續操作
+Do you want to continue? (Y/n)
+5.按下 ENTER 鍵，以便將通關密語留空
+Generating public/private rsa key pair.
+Enter passphrase (empty for no passphrase)
+6.連線完成後，結束遠端殼層即可中斷 SSH 連線
+exit
+
+補充:
+	1.設置專案區域
+gcloud config set compute/region us-west1
+	2.為區域(REGION)創造變量
+export REGION=us-west1
+	3.為可用區(ZONE)創造變量
+export ZONE=us-west1-c
+
+-------------------------------------------------
+-------------------------------------------------
+中文教學
+Google Cloud 上主要三種 Serverless 服務
+分別為 Cloud Functions、App Engine 及 Cloud Run。
+https://blog.cloud-ace.tw/application-modernization/serverless/cloud-run-overview-and-tutorial/
+-------------------------------------------------
+-------------------------------------------------
+App Engine: Qwik Start - Python 專注軟體開發
+Developers only focus on building solutions(writing code) for their users
+---------------------------------------
+1. Enable Google App Engine Admin API
+APIs & Services --> Library --> 搜尋 App Engine Admin API --> ENABLE
+
+2. Download the Hello World app
+	*在Cloud Shell輸入，下載範例 copy the Hello World sample app
+git clone https://github.com/GoogleCloudPlatform/python-docs-samples.git
+	*在Cloud Shell輸入，切換到範例目錄 Go to the directory that contains the sample code
+cd python-docs-samples/appengine/standard_python3/hello_world
+
+3. Test the application
+	*在Cloud Shell輸入，用Google Cloud development server (dev_appserver.py)， 打開程式app.yaml
+dev_appserver.py app.yaml
+	*上方按鈕開啟看結果
+按鈕Web preview (小縮圖) > Preview on port 8080.
+
+4. Make a change
+	*新開Cloud Shell輸入，切換到檔案位置
+cd python-docs-samples/appengine/standard_python3/hello_world
+	*在Cloud Shell輸入，開啟檔案(main.py)
+nano main.py
+	*修改檔案內容
+Hello World! ----> Hello, Cruel World!
+	*存檔+離開Save the file with CTRL-S and exit with CTRL-X.
+CTRL-S
+CTRL-X
+	*上方按鈕開啟看結果
+按鈕Web preview (小縮圖) > Preview on port 8080.	
+	
+5. Deploy your app
+	*在Cloud Shell輸入，做部屬上架(確認目錄所在位置有app.yaml檔)
+gcloud app deploy
+	*在Cloud Shell輸入，按需求選擇(ex:us-west1)，確認繼續
+13
+Y
+
+6. View your application
+	*在Cloud Shell輸入，看成果
+gcloud app browse
+	*點開連結
+--------------------------------------------
+Cloud Functions: Qwik Start - Command Line
+https://cloud.google.com/functions/docs/writing/write-event-driven-functions#background-example-nodejs
+--------------------------------------------
+1. Create a function
+	*1-1在Cloud Shell輸入 set the default region
+gcloud config set compute/region us-east4
+
+	*1-2Create a directory
+mkdir gcf_hello_world
+
+	*1-3Move to the gcf_hello_world directory
+cd gcf_hello_world
+
+	*1-4Create and open index.js to edit
+nano index.js
+
+	*1-5內容寫進index.js
+/**
+* Background Cloud Function to be triggered by Pub/Sub.
+* This function is exported by index.js, and executed when
+* the trigger topic receives a message.
+*
+* @param {object} data The event payload.
+* @param {object} context The event metadata.
+*/
+exports.helloWorld = (data, context) => {
+const pubSubMessage = data;
+const name = pubSubMessage.data
+    ? Buffer.from(pubSubMessage.data, 'base64').toString() : "Hello World";
+
+console.log(`My Cloud Function: ${name}`);
+};
+
+	*1-6Exit nano (Ctrl+x) and save (Y) the file
+
+2. Create a cloud storage bucket
+	*在Cloud Shell輸入，gsutil mb -p [PROJECT_ID] gs://[BUCKET_NAME]，記得修改對應名稱
+gsutil mb -p qwiklabs-gcp-04-23efa3d35041 gs://qwiklabs-gcp-04-23efa3d35041
+
+3. Deploy your function
+	*在Cloud Shell輸入，gcloud functions deploy [helloWorld] --stage-bucket [BUCKET_NAME] --trigger-topic hello_world --runtime nodejs20，記得修改對應名稱
+gcloud functions deploy helloWorld --stage-bucket qwiklabs-gcp-04-23efa3d35041 --trigger-topic hello_world --runtime nodejs20
+	*在Cloud Shell輸入，Verify the status of the function，觀察結果status: ACTIVE
+gcloud functions describe helloWorld
+
+4. Test the function
+	*在Cloud Shell輸入， create a message test of the function，範例結果:executionId: 3zmhpf7l6j5b
+DATA=$(printf 'Hello World!'|base64) && gcloud functions call helloWorld --data '{"data":"'$DATA'"}'
+
+5. View logs
+	*在Cloud Shell輸入，Check the logs to see your messages in the log history
+gcloud functions logs read helloWorld
+--------------------------------------------
+Kubernetes Engine: Qwik Start
+Google Kubernetes Engine (GKE) provides a managed environment 
+for deploying, managing, and scaling your containerized applications 
+using Google infrastructure
+--------------------------------------------
+1. Set a default compute zone
+	*1-1.Set the default compute region.
+gcloud config set compute/region us-east1
+	*1-2.Set the default compute zone:
+gcloud config set compute/zone us-east1-c
+
+2. Create a GKE cluster(建立會等很久)
+	*Create a cluster  名稱:lab-cluster(Cluster names must start with a letter and end with an alphanumeric, and cannot be longer than 40 characters.)
+gcloud container clusters create --machine-type=e2-medium --zone=us-east1-c lab-cluster
+
+3. Get authentication credentials for the cluster
+	*Authenticate with the cluster
+gcloud container clusters get-credentials lab-cluster
+
+4. Deploy an application to the cluster
+	*4-1.create a new Deployment "hello-server" from the "hello-app" container image
+kubectl create deployment hello-server --image=gcr.io/google-samples/hello-app:1.0
+	*4-2.To create a Kubernetes Service, which is a Kubernetes resource that lets you expose your application to external traffic
+		*--port specifies the port that the container exposes.
+		*type="LoadBalancer" creates a Compute Engine load balancer for your container.
+kubectl expose deployment hello-server --type=LoadBalancer --port 8080
+	*4-3.To inspect the hello-server Service
+kubectl get service
+	*4-4.開啟新分頁，輸入網址(參考前一步驟的結果)， http://[EXTERNAL-IP]:8080
+http://34.139.119.141:8080
+
+5. Deleting the cluster
+	*To delete the cluster
+gcloud container clusters delete lab-cluster
+	*輸入Y，確認刪除(會等很久)
+Y
+-------------------------------------------------
+-------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+-------------------------------
+運用Cloud Vision API辨別圖片資訊(Labels, Faces, and Landmarks)-4steps
+Detect Labels, Faces, and Landmarks in Images with the Cloud Vision API
+-------------------------------
+Step1.設定API金鑰 Create an API key
+-------------------------------
+1.按系統申請金鑰
+APIs & Services --> Credentials --> CREATE CREDENTIALS --> API key
+2.Cloud Shell，下指令 設定金鑰變數 金鑰(AIzaSyAiwoejlviXG7LMrSQRwjaIOtyOaXo9fsY)
+export API_KEY=AIzaSyAiwoejlviXG7LMrSQRwjaIOtyOaXo9fsY
+
+-------------------------------
+Step2.上傳圖片 Upload an image to a Cloud Storage bucket
+-------------------------------
+1.create a Cloud Storage bucket to store your images
+Cloud Storage --> Buckets --> CREATE
+2.輸入所需資料，調整預設值
+***Name your bucket
+	*qwiklabs-gcp-00-271706b5b17a-bucket
+***Choose how to control access to objects
+	*取消勾選 Enforce public access prevention on this bucket 
+	*選Access control--> Fine-grained circle.
+***Create(下方按鈕)
+3.按系統上傳圖片
+UPLOAD FILES-->選電腦裡的圖片
+4.對圖片設權限
+圖片最右邊垂直三個點-->Edit access
+4-1.新增第五筆
+Add entry-->選Public(其他預設不變)-->SAVE
+
+-------------------------------
+Step3.建立程式碼 Create your request
+-------------------------------
+Cloud Shell-->點 筆Open Editor--> (左邊STUDENT_00....)新增檔案New File
+檔名:request.json
+程式碼:  
+{
+  "requests": [
+      {
+        "image": {
+          "source": {
+              "gcsImageUri": "gs://my-bucket-name/donuts.png"
+          }
+        },
+        "features": [
+          {
+            "type": "LABEL_DETECTION",
+            "maxResults": 10
+          }
+        ]
+      }
+  ]
+}
+補充***my-bucket-name改為剛剛新增資料夾的名字pngqwiklabs-gcp-00-271706b5b17a-bucket
+"gcsImageUri": "gs://my-bucket-name/donuts.png"
+(正確版)"gcsImageUri": "gs://qwiklabs-gcp-00-271706b5b17a-bucket/donuts.png"
+
+-------------------------------
+Step4-1.圖片辨別 Label detection
+-------------------------------
+1.Call the Cloud Vision API with curl，在Cloud Shell輸入
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+3.結果如下
+{
+  "responses": [
+    {
+	"labelAnnotations": [
+        {
+          "mid": "/m/02wbm",
+          "description": "Food",
+          "score": 0.986.............
+補充
+*description with the name of the item.
+*score, a number from 0 - 1 indicating how confident it is that the description matches what's in the image.
+*mid value that maps to the item's mid in Google's Knowledge Graph. You can use the mid when calling the Knowledge Graph API to get more information on the item.
+
+-------------------------------
+Step4-2.圖片辨別 Web detection
+-------------------------------
+1.修改request.json程式碼，features裡的type
+LABEL_DETECTION 改為 WEB_DETECTION
+2.回到Cloud Shell輸入
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+3.結果如下
+{
+  "responses": [
+    {
+	"webDetection": {
+        "webEntities": [
+          {
+            "entityId": "/m/01wydv",
+            "score": 0.70403904,
+            "description": "Beignet"..........
+			
+-------------------------------
+Step4-3.圖片辨別 Face detection
+-------------------------------
+1.修改request.json程式碼，圖片路徑、features裡的type
+{
+    "requests": [
+        {
+          "image": {
+            "source": {
+                "gcsImageUri": "gs://qwiklabs-gcp-03-462bcd2b1b54-bucket/selfie.png"
+            }
+          },
+          "features": [
+            {
+                "type": "FACE_DETECTION",
+                "maxResults": 2
+              },
+              {
+                "type": "LANDMARK_DETECTION",
+                "maxResults": 2
+              }
+          ]
+        }
+    ]
+  }
+2.在Cloud Shell輸入
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+3.結果如下
+{
+  "responses": [
+    {
+      "faceAnnotations": [
+        {
+          "boundingPoly": {
+            "vertices": [
+              {
+                "x": 744,
+                "y": 447...........   
+補充
+*boundingPoly gives you the x,y coordinates around the face in the image.
+*fdBoundingPoly is a smaller box than boundingPoly, focusing on the skin part of the face.
+*landmarks is an array of objects for each facial feature, some you may not have even known about. This tells us the type of landmark, along with the 3D position of that feature (x,y,z coordinates) where the z coordinate is the depth. The remaining values give you more details on the face, including the likelihood of joy, sorrow, anger, and surprise.
+
+-------------------------------
+Step4-4.圖片辨別 Landmark annotation
+-------------------------------
+1.修改request.json程式碼，圖片路徑、features裡的type
+{
+    "requests": [
+        {
+          "image": {
+            "source": {
+                "gcsImageUri": "gs://qwiklabs-gcp-03-462bcd2b1b54-bucket/city.png"
+            }
+          },
+          "features": [
+            {          
+                "type": "LANDMARK_DETECTION",
+                "maxResults": 10
+            }
+          ]
+        }
+    ]
+}
+2.在Cloud Shell輸入
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+3.結果如下
+{
+  "responses": [
+    {
+      "landmarkAnnotations": [
+        {
+          "mid": "/m/0hm_7",
+          "description": "Red Square",
+          "score": 0.85560876,
+          "boundingPoly": {
+            "vertices": [
+              {},
+              {
+                "x": 503
+              },
+              {
+                "x": 503,
+                "y": 6.........
+補充
+*the mid of the landmark
+*it's name (description)
+*a confidence score
+*The boundingPoly shows the region in the image where the landmark was identified.
+*The locations key tells us the latitude longitude coordinates of the picture.
+
+-------------------------------
+Step4-5.圖片辨別 Object localization
+-------------------------------
+1.修改request.json程式碼，引用網路圖片路徑、修改features裡的type
+{
+  "requests": [
+    {
+      "image": {
+        "source": {
+          "imageUri": "https://cloud.google.com/vision/docs/images/bicycle_example.png"
+        }
+      },
+      "features": [
+        {
+          "maxResults": 10,
+          "type": "OBJECT_LOCALIZATION"
+        }
+      ]
+    }
+  ]
+}
+2.在Cloud Shell輸入
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+3.結果如下
+{
+  "responses": [
+    {
+      "localizedObjectAnnotations": [
+        {
+          "mid": "/m/01bqk0",
+          "name": "Bicycle wheel",
+          "score": 0.89648587,
+          "boundingPoly": {
+            "normalizedVertices": [
+              {
+                "x": 0.32076266,
+                "y": 0.7..........
+補充
+*the boundingPoly has a normalizedVertices key, which gives you the coordinates of the object in the image. These coordinates are normalized to a range of 0 to 1, where 0 represents the top left of the image, and 1 represents the bottom right of the image.
+
+-------------------------------
+其他API參考
+-------------------------------
+參考連結 
+https://cloud.google.com/vision/docs/reference/rest/v1/images/annotate#Feature
+其他運用
+*Logo detection: Identify common logos and their location in an image.
+*Safe search detection: Determine whether or not an image contains explicit content. This is useful for any application with user-generated content. You can filter images based on four factors: adult, medical, violent, and spoof content.
+*Text detection: Run OCR to extract text from images. This method can even identify the language of text present in an image.
+
+補充:curl語法 分析網頁行為 研究跳轉和參數
+參考網址
+https://www.jack168.com/download/curl/curl.html
+https://www.cjkuo.net/linux-curl-detail/
+基本寫法: curl 網址
+curl http://google.com/
+
+
+
+-------------------------------
+Vertex AI PaLM API
+機器學習平臺Vertex AI，提供PaLM模型API。
+具5,400億參數的自然語言模型PaLM（Pathways Language Model）
+應用範圍 包含圖片、文字和影片
+-------------------------------
+The Vertex AI PaLM API enables you to test, customize, and deploy instances of Google's PaLM large language models (LLM) so that you can leverage the capabilities of PaLM in your applications. 
+The PaLM family of models supports text completion and multi-turn chat.
+-------------------------------
+安裝Vertex AI PaLM API
+-------------------------------
+Products & solutions-->All Products-->(Categories)Aritificial Intelligence-->Vertex AI-->ENABLE
+-------------------------------
+使用Vertex AI PaLM API
+在Cloud Shell，下指令
+-------------------------------
+MODEL_ID="text-bison"
+PROJECT_ID=$DEVSHELL_PROJECT_ID
+
+curl \
+-X POST \
+-H "Authorization: Bearer $(gcloud auth print-access-token)" \
+-H "Content-Type: application/json" \
+https://us-central1-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/us-central1/publishers/google/models/${MODEL_ID}:predict -d \
+$'{
+  "instances": [
+    { "prompt": "Provide a summary with about two sentences for the following article:
+The efficient-market hypothesis (EMH) is a hypothesis in financial \
+economics that states that asset prices reflect all available \
+information. A direct implication is that it is impossible to \
+\\"beat the market\\" consistently on a risk-adjusted basis since market \
+prices should only react to new information. Because the EMH is \
+formulated in terms of risk adjustment, it only makes testable \
+predictions when coupled with a particular model of risk. As a \
+result, research in financial economics since at least the 1990s has \
+focused on market anomalies, that is, deviations from specific \
+models of risk. The idea that financial market returns are difficult \
+to predict goes back to Bachelier, Mandelbrot, and Samuelson, but \
+is closely associated with Eugene Fama, in part due to his \
+influential 1970 review of the theoretical and empirical research. \
+The EMH provides the basic logic for modern risk-based theories of \
+asset prices, and frameworks such as consumption-based asset pricing \
+and intermediary asset pricing can be thought of as the combination \
+of a model of risk with the EMH. Many decades of empirical research \
+on return predictability has found mixed evidence. Research in the \
+1950s and 1960s often found a lack of predictability (e.g. Ball and \
+Brown 1968; Fama, Fisher, Jensen, and Roll 1969), yet the \
+1980s-2000s saw an explosion of discovered return predictors (e.g. \
+Rosenberg, Reid, and Lanstein 1985; Campbell and Shiller 1988; \
+Jegadeesh and Titman 1993). Since the 2010s, studies have often \
+found that return predictability has become more elusive, as \
+predictability fails to work out-of-sample (Goyal and Welch 2008), \
+or has been weakened by advances in trading technology and investor \
+learning (Chordia, Subrahmanyam, and Tong 2014; McLean and Pontiff \
+2016; Martineau 2021).
+Summary:
+"}
+  ],
+  "parameters": {
+    "temperature": 0.2,
+    "maxOutputTokens": 256,
+    "topK": 40,
+    "topP": 0.95
+  }
+}'
+-------------------------------
+使用Vertex AI PaLM API
+Text Prompts指令補充
+-------------------------------
+*prompt (Text)
+	Text input to generate model response. Prompts can include preamble, questions, suggestions, instructions, or examples.
+*temperature (0.0–1.0   Default: 0)
+	The temperature is used for sampling during the response generation, which occurs when topP and topK are applied. Temperature controls the degree of randomness in token selection. Lower temperatures are good for prompts that require a more deterministic and less open-ended or creative response, while higher temperatures can lead to more diverse or creative results. A temperature of 0 is deterministic: the highest probability response is always selected. For most use cases, try starting with a temperature of 0.2.
+*maxOutputTokens (1–1024    Default: 0)
+	Maximum number of tokens that can be generated in the response. Specify a lower value for shorter responses and a higher value for longer responses.
+	A token may be smaller than a word. A token is approximately four characters. 100 tokens correspond to roughly 60-80 words.
+*topK (1–40   Default: 40)
+	Top-k changes how the model selects tokens for output. A top-k of 1 means the selected token is the most probable among all tokens in the model's vocabulary (also called greedy decoding), while a top-k of 3 means that the next token is selected from among the 3 most probable tokens (using temperature).
+	For each token selection step, the top K tokens with the highest probabilities are sampled. Then tokens are further filtered based on topP with the final token selected using temperature sampling.
+	Specify a lower value for less random responses and a higher value for more random responses.
+*topP (0.0–1.0    Default: 0.95)
+	Top-p changes how the model selects tokens for output. Tokens are selected from most K (see topK parameter) probable to least until the sum of their probabilities equals the top-p value. For example, if tokens A, B, and C have a probability of 0.3, 0.2, and 0.1 and the top-p value is 0.5, then the model will select either A or B as the next token (using temperature) and doesn't consider C. The default top-p value is 0.95.
+	Specify a lower value for less random responses and a higher value for more random responses.
+
+
+-------------------------------
+Generative AI Film Chatbot
+-------------------------------
+1.Access the Chat Application 開啟聊天機器人
+https://genai-chatbot-3semcvgp4a-uc.a.run.app
+
+2.Using Prompt Engineering 選擇要聊天的人
+Friday Films
+
+3.Context is Key
+Hello
+What do you know about Film?
+What do you know about the Best Actress?
+What can you tell me about Katheryn Hepburn?
+Who won the Best Actress in 2023?
+
+4.Improving soccer knowledge
+What is important to know about the Best Actress ?
+Where can I find out more information on Film and Best Actress?
+Who is the most famous person associated with Katheryn Hepburn ?
+Can you itemize five things about Katheryn Hepburn ?
+Can you write a five line poem about Katheryn Hepburn ?
+
+5.Taking the Assessment 學習互動後，回答問題
+
+
+-------------------------------
+Generative AI Basketball Chatbot
+-------------------------------
+1. Access the Chat Application 開啟聊天機器人
+https://genai-chatbot-vtbiizi75a-uc.a.run.app
+
+2. Using Prompt Engineering 選擇要聊天的人
+Bayesian Basketball
+
+3. Context is Key
+Hello
+What do you know about Basketball?
+What do you know about the China Basketball League?
+What can you tell me about Guangdong Southern Tigers?
+Who won the China Basketball League in 2023?
+
+4. Improving soccer knowledge
+What is important to know about the China Basketball League ?
+Where can I find out more information on Basketball and China Basketball League?
+Who is the most famous person associated with Guangdong Southern Tigers ?
+Can you itemize five things about Guangdong Southern Tigers ?
+Can you write a five line poem about Guangdong Southern Tigers ?
+
+5. Taking the Assessment 學習互動後，回答問題
+
+
+-------------------------------
+Get Started with Generative AI Studio
+-------------------------------
+安裝Vertex AI API
+APIs & Services --> Library --> Vertex AI API --> ENABLE
+1.Create prompts
+MORE PRODUCTS -->(ARTIFICAL INTELLIGENCE)Vertex AI --> Language --> TEXT PROMPT
+*FREE-FORM mode
+	Prompt輸入
+		What is a prompt gallery?
+	上方選擇
+		FREEFORM
+	右側設定
+		Model: text-bison(latest)
+		Region: us-central1(lowa)
+		Temperature: 0.2
+		Token limit: 1024
+		Top-K: 40
+		Top-P: 0.8
+		Max responses: 3
+		Safety filter threshold: Block few
+	按鈕SUBMIT
+*STRUCTURED mode
+	Test(INPUT) 輸入
+		the color of the sky is
+	上方選擇
+		STRUCTURED
+	右側設定
+		Model: text-bison(latest)
+		Region: us-central1(lowa)
+		Temperature: 0.2
+		Token limit: 256
+		Top-K: 40
+		Top-P: 0.8
+		Max responses: 3
+		Safety filter threshold: Block few
+    按鈕SUBMIT
+	
+	Examples輸入
+		INPUT:the color of the grass is
+		OUTPUT:the color of the grass is green
+	Test(INPUT) 輸入
+		the color of the sky is
+	按鈕SUBMIT
+	
+	Examples輸入
+		INPUT:
+			A well-made and entertaining film
+			I fell asleep after 10 minutes
+			The movie was ok
+		OUTPUT:
+			positive
+			negative
+			neutral
+	Test(INPUT) 輸入	
+		It was a time well spent!
+	右側設定
+		Model: text-bison(latest)
+		Region: us-central1(lowa)
+		Temperature: 0.2
+		Token limit: 256
+		Top-K: 40
+		Top-P: 0.8
+		Max responses: 3
+		Safety filter threshold: Block few
+    按鈕SUBMIT
+	右上角按鈕 SAVE
+		Prompt name: sentiment analysis test
+
+2.Create conversations
+	MORE PRODUCTS -->(ARTIFICAL INTELLIGENCE)Vertex AI --> Language --> TEXT CHAT	
+		
+	右側設定
+		Model: chat-bison(latest)		
+		Temperature: 0.2
+		Token limit: 1024
+		Top-K: 40
+		Top-P: 0.8
+		Max responses: 1
+		Safety filter threshold: Block few
+	Context輸入
+		Your name is Roy.
+		You are a support technician of an IT department.
+		You only respond with "Have you tried turning it off and on again?" to any queries.
+	對話框輸入(Enter a prompt to begin a conversation) 
+		My computer is so slow
+	右上角按鈕 SAVE
+		Prompt name: test
+
+補充
+FREE-FORM - This mode provides a free and easy approach to design your prompt. It is suitable for small and experimental prompts with no additional examples. You will be using this to explore zero-shot prompting.
+STRUCTURED - This mode provides an easy-to-use template approach to prompt design. Context and multiple examples can be added to the prompt in this mode. This is especially useful for one-shot and few-shot prompting methods which you will be exploring later.		
+Model: Choice of Model to provide a response to your prompt
+Temperature: Creative allowance for the model in generating the response
+Token limit: Desired length of the response
+Top-K: Number of the most probable tokens to consider as the next token
+Top-P: Threshold probability for a token be selected as the next token
+Max responses: Max number or reponses generated from prompt
+Add stop sequence: Stop when sequence is seen, up to five sequences
+Safety filter threshold: Adjusts how likely you are to see responses that could be harmful		
+
+	
+-------------------------------
+Generative AI Vacation Chatbot
+-------------------------------		
+1. Access the Chat Application 開啟聊天機器人
+https://genai-chatbot-xx7yayjmlq-ue.a.run.app
+
+2. Using Prompt Engineering 選擇要聊天的人
+Trippy Travel
+
+3. Context is Key
+Hello
+What do you know about Vacation?
+What do you know about the World Leading All-inclusive Family Resort?
+What can you tell me about Beaches Ocho Rios, Ocho Rios, Jamaica?
+Who won the World Leading All-inclusive Family Resort in 2023?
+
+4. Improving soccer knowledge
+What is important to know about the World Leading All-inclusive Family Resort ?
+Where can I find out more information on Vacation and World Leading All-inclusive Family Resort?
+Who is the most famous person associated with Beaches Ocho Rios, Ocho Rios, Jamaica ?
+Can you itemize five things about Beaches Ocho Rios, Ocho Rios, Jamaica ?
+Can you write a five line poem about Beaches Ocho Rios, Ocho Rios, Jamaica ?
+
+5. Taking the Assessment 學習互動後，回答問題
+	
+	
+-------------------------------			
+Generative AI Music Chatbot		
+-------------------------------			
+1. Access the Chat Application 開啟聊天機器人
+https://genai-chatbot-kovyhasm3a-uc.a.run.app
+
+2. Using Prompt Engineering 選擇要聊天的人
+Merry Music
+
+3. Context is Key
+Hello
+What do you know about Music?
+What do you know about the Best New Artist?
+What can you tell me about Olivia Rodrigo?
+Who won the Best New Artist in 2023?
+
+4. Improving soccer knowledge
+What is important to know about the Best New Artist ?
+Where can I find out more information on Music and Best New Artist?
+Who is the most famous person associated with Olivia Rodrigo ?
+Can you itemize five things about Olivia Rodrigo ?
+Can you write a five line poem about Olivia Rodrigo ?
+
+5. Taking the Assessment 學習互動後，回答問題		
+		
+		
+		
+		
+		
+-------------------------------			
+測驗學習成果
+Analyze Images with the Cloud Vision API: Challenge Lab	
+-------------------------------				
+Step1.設定API金鑰 Create an API key
+-------------------------------
+1.Verify your resources 按系統申請金鑰
+APIs & Services --> Credentials --> CREATE CREDENTIALS --> API key
+2.Cloud Shell，下指令 設定金鑰變數 金鑰(AIzaSyAiwoejlviXG7LMrSQRwjaIOtyOaXo9fsY)
+export API_KEY=AIzaSyAiwoejlviXG7LMrSQRwjaIOtyOaXo9fsY		
+-------------------------------
+Step2.建立程式碼 Create Request.json file
+-------------------------------
+Cloud Shell-->點 筆Open Editor--> (左邊STUDENT_00....)新增檔案New File
+檔名:request.json
+程式碼:  
+{
+    "requests": [
+        {
+          "image": {
+            "source": {
+                "gcsImageUri":"gs://qwiklabs-gcp-02-b0271d09aedc-bucket/manif-des-sans-papiers.jpg" 
+            }
+          },
+          "features": [
+            {
+              "type":"TEXT_DETECTION" ,
+              "maxResults": 10
+            }
+          ]
+        }
+    ]
+}
+---------------------------------------------------------
+Step3.開始辨識，在Cloud Shell輸入
+Call the Vision API with curl(text detection and landmark detection)
+---------------------------------------------------------
+	curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}	
+---------------------------------------------------------
+Step3-1.開始辨識，並存檔
+Saves the curl response in text-response.json file		
+---------------------------------------------------------
+	curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY} -o text-response.json	
+---------------------------------------------------------
+Step3-2.上傳檔案
+Upload output to Cloud Storage
+---------------------------------------------------------
+	gsutil cp text-response.json gs://qwiklabs-gcp-02-b0271d09aedc-bucket	
+---------------------------------------------------------	
+修改request.json檔	(LANDMARK_DETECTION)
+---------------------------------------------------------
+{
+    "requests": [
+        {
+          "image": {
+            "source": {
+                "gcsImageUri":"gs://qwiklabs-gcp-02-b0271d09aedc-bucket/manif-des-sans-papiers.jpg" 
+            }
+          },
+          "features": [
+            {
+              "type":"LANDMARK_DETECTION" ,
+              "maxResults": 10
+            }
+          ]
+        }
+    ]
+}
+---------------------------------------------------------
+Step4-1.開始辨識，並存檔
+Saves the curl response in text-response.json file		
+---------------------------------------------------------
+	curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY} -o landmark-response.json
+---------------------------------------------------------
+Step4-2.上傳檔案
+Upload output to Cloud Storage
+---------------------------------------------------------
+	gsutil cp landmark-response.json gs://qwiklabs-gcp-02-b0271d09aedc-bucket
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

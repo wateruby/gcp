@@ -1,0 +1,331 @@
+--------------------------------------------------------------------------------
+2.Google Cloud Computing Foundations: Infrastructure in Google Cloud學習筆記
+--------------------------------------------------------------------------------
+課程連結
+https://www.cloudskillsboost.google/paths/36/course_templates/154
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+Cloud Storage: Qwik Start - CLI/SDK
+--------------------------------------------------------------------------------
+1. Create a bucket    
+	---Cloud Storage utility tool (gsutil)
+	---make bucket (mb)
+	---gsutil mb gs://<YOUR-BUCKET-NAME>
+	補充Bucket naming rules
+		Do not include sensitive information in the bucket name, because the bucket namespace is global and publicly visible.
+		Bucket names must contain only lowercase letters, numbers, dashes (-), underscores (_), and dots (.). Names containing dots require verification.
+		Bucket names must start and end with a number or letter.
+		Bucket names must contain 3 to 63 characters. Names containing dots can contain up to 222 characters, but each dot-separated component can be no longer than 63 characters.
+		Bucket names cannot be represented as an IP address in dotted-decimal notation (for example, 192.168.5.4).
+		Bucket names cannot begin with the "goog" prefix.
+		Bucket names cannot contain "google" or close misspellings of "google".
+		Also, for DNS compliance and future compatibility, you should not use underscores (_) or have a period adjacent to another period or dash. For example, ".." or "-." or ".-" are not valid in DNS names.
+	*在cloud shell輸入
+gsutil mb gs://first001-bucket
+
+2. Upload an object into your bucket
+	---download this image (ada.jpg) into your bucket
+curl https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Ada_Lovelace_portrait.jpg/800px-Ada_Lovelace_portrait.jpg --output ada.jpg
+	---gsutil cp command to upload the image from the location where you saved it to the bucket
+	---語法 gsutil cp ada.jpg gs://YOUR-BUCKET-NAME
+gsutil cp ada.jpg gs://first001-bucket
+	---remove the downloaded image
+rm ada.jpg
+
+3. Download an object from your bucket
+	---gsutil cp command to download the image you stored in your bucket to Cloud Shell
+	---語法gsutil cp -r gs://YOUR-BUCKET-NAME/ada.jpg . (注意 結尾有一個點)
+gsutil cp -r gs://first001-bucket/ada.jpg .
+
+4. Copy an object to a folder in the bucket
+	--- gsutil cp command to create a folder called image-folder and copy the image (ada.jpg)
+	---語法gsutil cp gs://YOUR-BUCKET-NAME/ada.jpg gs://YOUR-BUCKET-NAME/image-folder/
+gsutil cp gs://first001-bucket/ada.jpg gs://first001-bucket/image-folder/
+
+5. List contents of a bucket or folder
+	---gsutil ls command to list the contents of the bucket
+	---語法gsutil ls gs://YOUR-BUCKET-NAME
+gsutil ls gs://first001-bucket
+	
+6. List details for an object
+	---gsutil ls command, with the -l flag to get some details about the image file
+	---語法gsutil ls -l gs://YOUR-BUCKET-NAME/ada.jpg
+gsutil ls -l gs://first001-bucket/ada.jpg
+
+7. Make your object publicly accessible
+	---gsutil acl ch command to grant all users read permission for the object stored in your bucket
+	---語法gsutil acl ch -u AllUsers:R gs://YOUR-BUCKET-NAME/ada.jpg
+gsutil acl ch -u AllUsers:R gs://first001-bucket/ada.jpg
+	
+8. Remove public access
+	---remove this permission
+	---語法gsutil acl ch -d AllUsers gs://YOUR-BUCKET-NAME/ada.jpg
+gsutil acl ch -d AllUsers gs://first001-bucket/ada.jpg
+
+	---Delete objects
+	---語法gsutil acl ch -d AllUsers gs://YOUR-BUCKET-NAME/ada.jpg
+gsutil rm gs://first001-bucket/ada.jpg
+
+
+
+--------------------------------------------------------------------------------
+Cloud SQL for MySQL: Qwik Start
+--------------------------------------------------------------------------------
+1. Create a Cloud SQL instance
+	按系統創建SQL
+SQL --> Create Instance --> Choose MySQL
+Instance ID:myinstance
+Password(按GENERATE):4{n^L44m6I=,u{X`
+database version:MySQL 8
+Choose a Cloud SQL edition:Enterprise 
+Choose a preset for this edition: Development 
+Region:us-east4
+Zonal availability:Multi zones (Highly available)
+	Primary Zone:us-east4-c
+CREATE INSTANCE
+
+2. Connect to your instance using the mysql client in Cloud Shell
+	---connect to your Cloud SQL instance
+gcloud sql connect myinstance --user=root
+	---輸入創建 SQL 密碼
+4{n^L44m6I=,u{X`
+
+3. Create a database and upload data
+	---Create a SQL database called guestbook
+CREATE DATABASE guestbook;
+	---Insert the following sample data into the guestbook database
+USE guestbook;
+CREATE TABLE entries (guestName VARCHAR(255), content VARCHAR(255),
+    entryID INT NOT NULL AUTO_INCREMENT, PRIMARY KEY(entryID));
+    INSERT INTO entries (guestName, content) values ("first guest", "I got here!");
+INSERT INTO entries (guestName, content) values ("second guest", "Me too!");
+	---retrieve the data
+SELECT * FROM entries;
+	---剛剛的sample內容，結果會顯示如下
++--------------+-------------+---------+
+| guestName    | content     | entryID |
++--------------+-------------+---------+
+| first guest  | I got here! |       1 |
+| second guest | Me too!     |       2 |
++--------------+-------------+---------+
+2 rows in set (0.17 sec)
+
+
+
+
+
+
+
+--------------------------------------------------------------------------------
+Cloud Endpoints: Qwik Start
+--------------------------------------------------------------------------------
+1. Getting the sample code
+	---get the sample API and scripts
+gsutil cp gs://spls/gsp164/endpoints-quickstart.zip .
+unzip endpoints-quickstart.zip
+	---Change to the directory that contains the sample code
+cd endpoints-quickstart
+
+2. Deploying the Endpoints configuration
+	---To deploy the Endpoints configuration,In the endpoints-qwikstart directory
+cd scripts
+	---Run the following script, which is included in the sample
+./deploy_api.sh
+
+3. Deploying the API backend
+./deploy_app.sh
+
+4. Sending requests to the API
+	---The API expects one query parameter, iataCode, that is set to a valid IATA airport code such as SEA or JFK.
+./query_api.sh
+./query_api.sh JFK
+
+5. Tracking API activity
+	---Run this traffic generation script in Cloud Shell to populate the graphs and logs
+./generate_traffic.sh
+	---離開運算
+Ctrl+C
+	---按系統
+(SERVERLESS)Endpoints --> Airport Codes 
+	---The Permissions panel allows you to control who has access to your API and the level of access.
+點開右上方 Show permissions panel 
+	---This tab displays a history of your API deployments, including the deployment time and who deployed the change.
+點上方 Deployment History 
+	---Here you'll see the traffic coming in. After the traffic generation script has been running for a minute, scroll down to see the three lines on the Total latency graph (50th, 95th, and 99th percentiles). This data provides a quick estimate of response times. 最下面可以查看Log
+點上方 Overview --> 滑到下面 View logs
+
+6. Add a quota to the API
+	---Deploy the Endpoints configuration that has a quota
+./deploy_api.sh ../openapi_with_ratelimit.yaml
+	---Redeploy your app to use the new Endpoints configuration (this may take a few minutes)
+./deploy_app.sh
+	---按系統
+APIs & Services --> Credentials -->Create credentials --> API key --> 複製金鑰AIzaSyBisWoJL6QVClq2GzUHxxpYoo7xTTx3ysg
+	---指令輸入，剛剛申請的api金鑰 export API_KEY=YOUR-API-KEY
+export API_KEY=AIzaSyBisWoJL6QVClq2GzUHxxpYoo7xTTx3ysg
+	---Send your API a request using the API key variable
+./query_api_with_key.sh $API_KEY
+	---The API now has a limit of 5 requests per second. Run the following command to send traffic to the API and trigger the quota limit
+./generate_traffic_with_key.sh $API_KEY
+	---After running the script for 5-10 seconds, enter CTRL+C in Cloud Shell to stop the script離開運算
+Ctrl+C
+	---Send another authenticated request to the API
+./query_api_with_key.sh $API_KEY
+
+
+
+
+--------------------------------------------------------------------------------
+Google Cloud Pub/Sub: Qwik Start - Python
+--------------------------------------------------------------------------------
+1. Create a virtual environment
+	---Install the virtualenv environment
+sudo apt-get install -y virtualenv
+	---Build the virtual environment
+python3 -m venv venv
+	---Activate the virtual environment
+source venv/bin/activate
+
+2. Install the client library
+	--- install the client library
+pip install --upgrade google-cloud-pubsub
+	---Get the sample code by cloning a GitHub repository
+git clone https://github.com/googleapis/python-pubsub.git
+	---Navigate to the directory:
+cd python-pubsub/samples/snippets
+
+3. Pub/Sub - the Basics介紹
+There are three terms in Pub/Sub that appear often: 
+ *topics : shared string that allows applications to connect with one another through a common thread 
+ *publishing : creates and sends messages to a topic
+ *subscribing : creates a subscription to a topic to receive messages from it
+
+4. Create a topic
+	---Project ID should automatically be stored in the environment variable GOOGLE_CLOUD_PROJECT
+	---Ensure the output is the same as the Project ID in your CONNECTION DETAILS
+echo $GOOGLE_CLOUD_PROJECT
+	---publisher.py is a script that demonstrates how to perform basic operations on topics with the Cloud Pub/Sub API. View the content of publisher script
+cat publisher.py
+	---information about the publisher script
+python publisher.py -h
+	---Run the publisher script to create Pub/Sub Topic
+python publisher.py $GOOGLE_CLOUD_PROJECT create MyTopic
+	---returns a list of all Pub/Sub topics in a given project
+python publisher.py $GOOGLE_CLOUD_PROJECT list
+	---按系統，可以看到剛剛新增的 MyTopic
+Pub/Sub --> Topics
+
+5. Create a subscription
+	---Create a Pub/Sub subscription for topic with subscriber.py script
+python subscriber.py $GOOGLE_CLOUD_PROJECT create MyTopic MySub
+	---returns a list of subscribers in given project
+python subscriber.py $GOOGLE_CLOUD_PROJECT list-in-project
+	---按系統，可以看到剛剛新增的 MySub
+Pub/Sub --> Subscriptions
+	---information about the subscriber script
+python subscriber.py -h
+
+6. Publish messages
+	---Publish the message "Hello" to MyTopic
+gcloud pubsub topics publish MyTopic --message "Hello"
+	---Publish more messages
+gcloud pubsub topics publish MyTopic --message "Publisher's name is NAME"	
+gcloud pubsub topics publish MyTopic --message "Publisher likes to eat FOOD"	
+gcloud pubsub topics publish MyTopic --message "Publisher thinks Pub/Sub is awesome"
+	
+7. View messages
+	---Use MySub to pull the message from MyTopic
+python subscriber.py $GOOGLE_CLOUD_PROJECT receive MySub
+	---離開
+Ctrl+C
+
+
+--------------------------------------------------------------------------------
+User Authentication: Identity-Aware Proxy
+--------------------------------------------------------------------------------
+0.Download the code準備資料
+	---Download the code from a public storage bucket and then change to the code folder
+gsutil cp gs://spls/gsp499/user-authentication-with-iap.zip .
+unzip user-authentication-with-iap.zip
+cd user-authentication-with-iap
+
+1. Deploy the application and protect it with IAP
+	---切換目錄
+cd 1-HelloWorld
+	---list each file in the shell using the cat command
+cat main.py
+	---Deploy to App Engine
+gcloud app deploy
+	---Select a region us-west1輸入對應號碼
+13
+	---continue, enter Y
+Y
+	---view your application
+gcloud app browse
+點連結 看結果
+	---按系統 Restrict access with IAP
+Security --> Identity-Aware Proxy --> ENABLE API --> GO TO IDENTITY-AWARE PROXY --> CONFIGURE CONSENT SCREEN --> Internal --> Create
+	App name:IAP Example
+	User support email:點開系統給的email
+	Application home page:(剛剛的網址)https://qwiklabs-gcp-00-cd4a0672d246.uw.r.appspot.com
+	Application privacy Policy link:(剛剛的網址+/privacy)https://qwiklabs-gcp-00-cd4a0672d246.uw.r.appspot.com/privacy
+	Authorized domains:點ADD DOMAIN -->(純網址，不用https://)qwiklabs-gcp-00-cd4a0672d246.uw.r.appspot.com
+	Developer Contact Information:(必填自己輸入email)hello1@gmail.com
+SAVE AND CONTINUE --> SAVE AND CONTINUE --> Back to Dashboard
+	---disable the Flex API
+gcloud services disable appengineflex.googleapis.com
+	---Turn on IAP
+重整頁面(Identity-Aware Proxy) --> App Engine app旁邊的IAP打開 TURN ON
+	---Each email address that should be allowed access needs to be added as a Member
+點開App Engine app旁邊(Status)√ --> Add Principal
+	Add Principal:(輸入email帳號)student-03-36e643a9eb4c@qwiklabs.net
+	Select a role: Cloud IAP --> IAP-Secured Web App User
+SAVE
+重整頁面 --> 點開網址 --> 結果成功顯示
+
+2. Access user identity information
+	---change to the folder
+cd ~/user-authentication-with-iap/2-HelloUser
+	---Deploy to App Engine
+gcloud app deploy
+	--- continue, enter Y
+Y
+	---Test the updated IAP
+gcloud app browse
+點連結 看結果
+	---按系統Turn off IAP
+Security --> Identity-Aware Proxy -->App Engine app旁邊的IAP關閉 TURN OFF -->點連結 看結果(跟剛剛的結果顯示比較，不會出現使用者資料)
+	---application is now unprotected, a user could send a web request that appeared to have passed through IAP
+	---語法curl -X GET <your-url-here> -H "X-Goog-Authenticated-User-Email: totally fake email"
+curl -X GET https://qwiklabs-gcp-00-cd4a0672d246.uw.r.appspot.com/ -H "X-Goog-Authenticated-User-Email: totally fake email"
+	
+3. Use Cryptographic Verification
+	---change to the folder
+cd ~/user-authentication-with-iap/3-HelloVerifiedUser
+	---Deploy to App Engine
+gcloud app deploy
+	---continue, enter Y
+Y
+	---Test the Cryptographic Verification
+gcloud app browse
+點連結 看結果
+	---Turn on IAP
+Identity-Aware Proxy --> App Engine app旁邊的IAP打開 TURN ON
+重整連結頁面 看結果(跟剛剛的結果顯示比較，會出現使用者資料)
+
+
+--------------------------------------------------------------------------------
+Cloud IAM: Qwik Start
+--------------------------------------------------------------------------------
+	---按系統設定權限(新增使用者)
+IAM & Admin --> IAM --> +GRANT ACCESS	
+	New principal:(Email)
+	Assign roles:Cloud Storage --> Storage Object Viewer
+SAVE	
+	---按系統設定權限(移除使用者)
+IAM & Admin --> IAM --> 勾選要取消的人 --> +REMOVE ACCESS
+	---按系統設定權限(修改權限)
+使用者旁邊的筆(Edit Principal)  --> 修改想給的權限 
+SAVE

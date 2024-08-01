@@ -1,0 +1,656 @@
+--------------------------------------------------------------------------
+4.Google Cloud Computing Foundations: Data, ML, and AI in Google Cloud學習筆記
+--------------------------------------------------------------------------
+課程連結
+https://www.cloudskillsboost.google/paths/36/course_templates/156
+--------------------------------------------------------------------------
+
+
+--------------------------------------------
+Dataproc: Qwik Start - Console
+--------------------------------------------
+1. Create a cluster
+Dataproc --> Clusters --> Create cluster --> Cluster on Compute Engine -->Create
+	(Set up cluster)
+		Name:example-cluster
+		Region:us-central1
+		Zone:us-central1-c
+	(Configure nodes)-both the Manager node and Worker nodes are set to the correct Machine Series and Machine Type
+		Machine Series:E2
+		Machine Type:e2-standard-2
+		(Number of worker nodes)Max Worker Nodes:2
+Create 
+
+
+2. Submit a job
+	---To run a sample Spark job
+Dataproc --> Jobs -->Submit job
+	Region:us-central1
+	Cluster:example-cluster
+	Job type:Spark
+	Main class or jar:org.apache.spark.examples.SparkPi
+	Jar files:file:///usr/lib/spark/examples/jars/spark-examples.jar
+	Arguments:1000 (This sets the number of tasks.)
+Submit
+
+
+3. View the job output
+	---To see your completed job's output
+Dataproc --> Jobs -->Job ID(剛剛創的)job-9358510e
+	LINE WRAP : ON 看結果
+	
+
+4. Update a cluster
+	---To change the number of worker instances in your cluster
+Dataproc --> Clusters -->(Name)example-cluster(剛剛創的) -->(中間)Configuration (display your cluster's current settings) --> Edit
+	Worker nodes :4
+	Save
+	---To rerun the job with the updated cluster, you would click Jobs in the left pane, then click SUBMIT JOB
+Dataproc --> Jobs --> Submit a job
+	Region	us-central1
+	Cluster	example-cluster
+	Job type	Spark
+	Main class or jar	org.apache.spark.examples.SparkPi
+	Jar files	file:///usr/lib/spark/examples/jars/spark-examples.jar
+	Arguments	1000 (This sets the number of tasks.)
+Submit
+
+
+
+
+--------------------------------------------
+Dataproc: Qwik Start - Command Line
+--------------------------------------------
+1. Create a cluster
+	---set the Region
+gcloud config set dataproc/region us-east4
+	---grab the PROJECT_ID and PROJECT_NUMBER
+PROJECT_ID=$(gcloud config get-value project) && gcloud config set project $PROJECT_ID
+
+PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+	--- give the Storage Admin role to the Compute Engine default service account
+gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com --role=roles/storage.admin
+	---create a cluster called example-cluster with e2-standard-4 VMs and default Cloud Dataproc settings
+gcloud dataproc clusters create example-cluster --worker-boot-disk-size 500 --worker-machine-type=e2-standard-4 --master-machine-type=e2-standard-4
+	---confirm a zone for your cluster. Enter Y
+Y
+
+
+2. Submit a job
+	--- submit a sample Spark job that calculates a rough value for pi
+gcloud dataproc jobs submit spark --cluster example-cluster --class org.apache.spark.examples.SparkPi --jars file:///usr/lib/spark/examples/jars/spark-examples.jar -- 1000
+	補充說明
+	*That you want to run a spark job on the example-cluster cluster
+	*The class containing the main method for the job's pi-calculating application
+	*The location of the jar file containing your job's code
+	*The parameters you want to pass to the job—in this case, the number of tasks, which is 1000
+
+3. Update a cluster
+	---change the number of workers in the cluster to four
+gcloud dataproc clusters update example-cluster --num-workers 4
+	---decrease the number of worker nodes 2
+gcloud dataproc clusters update example-cluster --num-workers 2
+
+
+--------------------------------------------
+Dataflow: Qwik Start - Templates
+--------------------------------------------
+0.Ensure that the Dataflow API is successfully re-enabled
+(上方)Search --> Dataflow API -->Manage -->Disable API -->Disable -->Enable
+
+1-1.(方法一) Create a Cloud BigQuery dataset and table Using Cloud Shell
+	---create a BigQuery dataset and table
+	---create a dataset called taxirides
+bq mk taxirides
+	---instantiate a BigQuery table
+bq mk --time_partitioning_field timestamp --schema ride_id:string,point_idx:integer,latitude:float,longitude:float,timestamp:timestamp,meter_reading:float,meter_increment:float,ride_status:string,passenger_count:integer -t taxirides.realtime
+	---Create a Cloud Storage bucket
+export BUCKET_NAME=qwiklabs-gcp-04-9e60b443b8ce
+gsutil mb gs://$BUCKET_NAME/
+	
+
+1-2.(方法二) Create a Cloud BigQuery dataset and table using the Cloud Console
+(Big Data)BigQuery -->Done -->(左邊)Explorer section 剛剛創的檔案 右邊有三個點 Create dataset
+	dataset ID:taxirides 
+	multi-region:us (multiple regions in United States) 
+CREATE DATASET
+點開taxirides -->CREATE TABLE 
+	(Destination)Table:realtime
+	Edit as text:打開輸入內文
+	ride_id:string,point_idx:integer,latitude:float,longitude:float,timestamp:timestamp,	meter_reading:float,meter_increment:float,ride_status:string,passenger_count:integer
+Create table	
+	---Create a Cloud Storage bucket
+Cloud Storage --> Buckets --> Create bucket	
+	Name your bucket:qwiklabs-gcp-04-9e60b443b8ce
+Create	
+	
+2. Run the pipeline
+	---Deploy the Dataflow Template
+gcloud dataflow jobs run iotflow \
+    --gcs-location gs://dataflow-templates-us-west1/latest/PubSub_to_BigQuery \
+    --region us-west1 \
+    --worker-machine-type e2-medium \
+    --staging-location gs://qwiklabs-gcp-04-9e60b443b8ce/temp \
+    --parameters inputTopic=projects/pubsub-public-data/topics/taxirides-realtime,outputTableSpec=qwiklabs-gcp-04-9e60b443b8ce:taxirides.realtime
+	*補充In the Google Cloud Console, on the Navigation menu, click Dataflow > Jobs, and you will see your dataflow job
+
+3. Submit a query
+	---In the BigQuery Editor, add the following to query the data in your project:
+BigQuery-->create sql query，貼上下面程式碼
+	SELECT * FROM `qwiklabs-gcp-04-9e60b443b8ce.taxirides.realtime` LIMIT 1000
+RUN
+
+
+--------------------------------------------
+Dataflow: Qwik Start - Python
+--------------------------------------------
+0.Ensure that the Dataflow API is successfully re-enabled
+(上方)Search --> Dataflow API -->Manage -->Disable API -->Disable -->Enable
+
+1. Create a Cloud Storage bucket
+Cloud Storage --> Buckets -->Create bucket
+	Name: qwiklabs-gcp-00-f1bc9ade9444-bucket
+	Location type: Multi-region
+	Location: us
+Create
+
+2. Install pip and the Cloud Dataflow SDK
+	---The latest Cloud Dataflow SDK for Python requires a Python version >= 3.7
+	---To ensure you are running the process with the correct version, run the Python3.9 Docker Image:
+docker run -it -e DEVSHELL_PROJECT_ID=$DEVSHELL_PROJECT_ID python:3.9 /bin/bash
+	--- install the latest version of the Apache Beam for Python
+pip install 'apache-beam[gcp]'==2.42.0
+	---Run the wordcount.py example locally
+python -m apache_beam.examples.wordcount --output OUTPUT_FILE
+	---list the files that are on your local cloud environment to get the name of the OUTPUT_FILE
+ls
+	---Copy the name of the OUTPUT_FILE and cat into it
+	---語法cat <file name>
+cat OUTPUT_FILE-00000-of-00001
+
+3. Run an example pipeline remotely
+	---Set the BUCKET environment variable to the bucket you created earlier
+	---語法BUCKET=gs://<bucket name provided earlier>
+BUCKET=gs://qwiklabs-gcp-00-f1bc9ade9444-bucket
+	---run the wordcount.py example remotely
+python -m apache_beam.examples.wordcount --project $DEVSHELL_PROJECT_ID \
+  --runner DataflowRunner \
+  --staging_location $BUCKET/staging \
+  --temp_location $BUCKET/temp \
+  --output $BUCKET/results/output \
+  --region us-central1
+
+4. Check that your job succeeded
+Dataflow -->(點開剛剛的Name)beamapp-root-1231081737-351553-mpsqnn8z
+Cloud Storage-->Buckets-->(點開剛剛的Name)qwiklabs-gcp-00-f1bc9ade9444-bucket -->裡面會有兩個資料夾 results, staging -->results(output files that your job created)-->output-00000-of-00001 (file to see the word counts it contains)
+
+
+
+--------------------------------------------
+Dataprep: Qwik Start
+--------------------------------------------
+1. Create a Cloud Storage bucket in your project
+Cloud Storage --> Buckets --> Create bucket
+	Name:adddddd1_bucket
+	(Choose how to control access to objects)
+		Uncheck Enforce public access prevention on this bucket 
+	Create
+
+2. Initialize Cloud Dataprep
+	-- Cloud Shell and run
+gcloud beta services identity create --service=dataprep.googleapis.com
+	---Navigation menu
+Dataprep -->Accept-->Agree and Continue -->Allow -->選帳號 -->Allow -->Accept -->Continue 
+
+3. Create a flow
+(Dataprep介面) (左方) Flows -->(上方)Create --> Blank Flow-->Untitled Flow(Rename)
+	Flow Name:FEC-2016
+	Flow Description:United States Federal Elections Commission 2016
+OK
+
+4. Import datasets
+(上方)Add Datasets --> (左下)Import datasets -->(左方)Cloud Storage -->(上方Cloud Storage)點筆 edit path-->輸入	gs://spls/gsp105-->	Go -->點開資料夾 us-fec/ 
+	點開 "+" cn-2016.txt 重新命名 Candidate Master 2016
+	點開 "+" itcont-2016-orig.txt 重新命名Campaign Contributions 2016
+	Import & Add to Flow
+
+(系統操作練習5-8)
+5. Prep the candidate file
+	---By default, the Candidate Master 2016 dataset is selected. In the right pane
+Edit Recipe
+
+
+6. Wrangle the Contributions file and join it to the Candidates file
+
+
+7. Summary of data
+
+
+8. Rename columns
+
+
+
+
+
+
+
+--------------------------------------------
+Vertex AI: Qwik Start
+--------------------------------------------
+1. Enable Google Cloud services(Cloud Shell輸入)
+gcloud services enable \
+  compute.googleapis.com \
+  iam.googleapis.com \
+  iamcredentials.googleapis.com \
+  monitoring.googleapis.com \
+  logging.googleapis.com \
+  notebooks.googleapis.com \
+  aiplatform.googleapis.com \
+  bigquery.googleapis.com \
+  artifactregistry.googleapis.com \
+  cloudbuild.googleapis.com \
+  container.googleapis.com
+
+2. Create Vertex AI custom service account for Vertex Tensorboard integration
+	---Create custom service account:
+SERVICE_ACCOUNT_ID=vertex-custom-training-sa
+gcloud iam service-accounts create $SERVICE_ACCOUNT_ID --description="A custom service account for Vertex custom training with Tensorboard" --display-name="Vertex AI Custom Training"
+
+	---Grant it access to Cloud Storage for writing and retrieving Tensorboard logs
+PROJECT_ID=$(gcloud config get-value core/project)
+gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT_ID@$PROJECT_ID.iam.gserviceaccount.com --role="roles/storage.admin"
+
+	---Grant it access to your BigQuery data source to read data into your TensorFlow model:
+gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT_ID@$PROJECT_ID.iam.gserviceaccount.com --role="roles/bigquery.admin"
+
+	---Grant it access to Vertex AI for running model training, deployment, and explanation jobs:
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member=serviceAccount:$SERVICE_ACCOUNT_ID@$PROJECT_ID.iam.gserviceaccount.com --role="roles/aiplatform.user"
+
+
+3. Launch Vertex AI Workbench notebook
+Vertex AI --> Workbench(Enable Notebooks API) -->	(View)User-Managed Notebooks-->Create New
+	Name :instance-20231231-201409
+	Region :us-west1 
+	Zone : us-west1-c
+	Continue
+	(Environment)
+		Environment:TensorFlow Enterprise 2.x
+		version:Use the latest version
+	(Machine type)
+		Series:E2
+		Machine type:e2-standard-2
+	Continue
+	(Disks)
+	Continue
+	(Networking)
+	Continue
+	(IAM and security)
+	Continue
+	(System health)
+	Create	
+(打開剛剛新增的notebook)Open JupyterLab
+	
+4. Clone the lab repository
+	---To clone the training-data-analyst repository in your JupyterLab instance
+	---In JupyterLab, click the Terminal icon to open a new terminal
+	---At the command-line prompt
+git clone --depth=1 https://github.com/GoogleCloudPlatform/training-data-analyst
+	---To confirm that you have cloned the repository, in the left panel, double click the training-data-analyst folder to see its contents.
+
+
+5. Install lab dependencies
+	---go to the training-data-analyst/self-paced-labs/vertex-ai/vertex-ai-qwikstart folder, then pip3 install requirements.txt to install lab dependencies:
+cd training-data-analyst/self-paced-labs/vertex-ai/vertex-ai-qwikstart
+pip3 install --user -r requirements.txt
+	---Navigate to lab notebook(左邊檔案夾)，並執行檔案
+training-data-analyst --> self-paced-labs --> vertex-ai --> vertex-ai-qwikstart -->lab_exercise.ipynb --> run each cell by clicking the Run(SHIFT + ENTER)
+
+
+--------------------------------------------
+Cloud Natural Language API: Qwik Start
+--------------------------------------------
+1. Create an API key
+	---set an environment variable with your PROJECT_ID
+export GOOGLE_CLOUD_PROJECT=$(gcloud config get-value core/project)
+	---create a new service account to access the Natural Language API
+gcloud iam service-accounts create my-natlang-sa \
+  --display-name "my natural language service account"
+	---create credentials to log in as your new service account. Create these credentials and save it as a JSON file "~/key.json"
+gcloud iam service-accounts keys create ~/key.json \
+  --iam-account my-natlang-sa@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com
+	---set the GOOGLE_APPLICATION_CREDENTIALS environment variable. The environment variable should be set to the full path of the credentials JSON file you created, which you can see in the output from the previous command
+export GOOGLE_APPLICATION_CREDENTIALS="/home/USER/key.json"
+
+2. Make an entity analysis request
+Compute Engine-->(linux instance) SSH
+	---try out the Natural Language API's entity analysis with the following sentence:Michelangelo Caravaggio, Italian painter, is known for 'The Calling of Saint Matthew'
+gcloud ml language analyze-entities --content="Michelangelo Caravaggio, Italian painter, is known for 'The Calling of Saint Matthew'." > result.json
+	--- preview the output of result.json file
+cat result.json
+	*補充
+	*The entity name and type, a person, location, event, etc.
+	*metadata, an associated Wikipedia URL if there is one.
+	*salience, and the indices of where this entity appeared in the text. Salience is a number in the [0,1] range that refers to the centrality of the entity to the text as a whole.
+	*mentions, which is the same entity mentioned in different ways.
+
+	
+
+--------------------------------------------
+Google Cloud Speech API: Qwik Start
+--------------------------------------------
+1. Create an API key
+APIs & services --> Credentials --> Create credentials -->API key
+	Copy the key (AIzaSyBGMA2_g0eYo4qEayz_7LVr811EZjj1Eso)--> Close
+	---connect using SSH to the instance provisioned for you
+Compute Engine-->(linux instance) SSH -->輸入語法export API_KEY=<YOUR_API_KEY>
+export API_KEY=AIzaSyBGMA2_g0eYo4qEayz_7LVr811EZjj1Eso
+
+2. Create your Speech API request
+	---Create request.json in the SSH command line. You'll use this to build your request to the speech API
+touch request.json
+	---Open the request.json
+nano request.json
+	---Add the following to your request.json file, using the uri value of the sample raw audio file:
+{
+  "config": {
+      "encoding":"FLAC",
+      "languageCode": "en-US"
+  },
+  "audio": {
+      "uri":"gs://cloud-samples-tests/speech/brooklyn.flac"
+  }
+}
+	---save, close the request.json file
+control + x 
+y 
+Enter
+
+3. Call the Speech API
+	---Pass your request body, along with the API key environment variable, to the Speech API with the following curl command (all in one single command line)
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json \
+"https://speech.googleapis.com/v1/speech:recognize?key=${API_KEY}"
+	*補充
+	*The transcript value will return the Speech API's text transcription of your audio file, and the confidence value indicates how sure the API is that it has accurately transcribed your audio
+	---save the response in a result.json file
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json \
+"https://speech.googleapis.com/v1/speech:recognize?key=${API_KEY}" > result.json
+
+
+
+--------------------------------------------
+Video Intelligence: Qwik Start
+--------------------------------------------
+1. Enable the Video Intelligence API
+	---For this lab, the Cloud Video Intelligence API is enabled for you.
+
+2. Set up authorization
+	---create a new service account named quickstart
+gcloud iam service-accounts create quickstart
+	---Create a service account key file, replacing <your-project-123> with your Project ID
+	---語法gcloud iam service-accounts keys create key.json --iam-account quickstart@<your-project-123>.iam.gserviceaccount.com
+gcloud iam service-accounts keys create key.json --iam-account quickstart@qwiklabs-gcp-04-f9103dff5f3d.iam.gserviceaccount.com
+	---authenticate your service account, passing the location of your service account key file
+gcloud auth activate-service-account --key-file key.json
+	---Obtain an authorization token using your service account
+gcloud auth print-access-token
+
+3. Make an annotate video request
+	---Run this command to create a JSON request file with the following text, and save it as request.json
+cat > request.json <<EOF
+{
+   "inputUri":"gs://spls/gsp154/video/train.mp4",
+   "features": [
+       "LABEL_DETECTION"
+   ]
+}
+EOF
+	---Use curl to make a videos:annotate request passing the filename of the entity request
+curl -s -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer '$(gcloud auth print-access-token)'' \
+    'https://videointelligence.googleapis.com/v1/videos:annotate' \
+    -d @request.json
+	---Use this script to request information on the operation by calling the v1.operations endpoint. Replace the PROJECTS, LOCATIONS and OPERATION_NAME with the value you just received in the previous command
+curl -s -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer '$(gcloud auth print-access-token)'' \
+    'https://videointelligence.googleapis.com/v1/projects/PROJECTS/locations/LOCATIONS/operations/OPERATION_NAME'
+
+
+
+
+--------------------------------------------------
+05.Compute Engine: Qwik Start - Windows
+https://www.cloudskillsboost.google/course_sessions/7147607/labs/423774
+--------------------------------------------------
+1.Create a virtual machine instance
+Compute Engine --> VM instances --> Create Instance
+	region: us-west1
+	zone: us-west1-c
+	(Machine configuration section) Series :E2.
+	(Boot disk)Change to begin configuring your boot disk.
+		Operating system :Windows Serve
+		Version:Windows Server 2022 Datacenter
+	Select
+Create 
+
+2.Remote Desktop (RDP) into the Windows Server
+	---Test the status of Windows Startup
+	---To see whether the server instance is ready for an RDP connection, run the following command at your Cloud Shell terminal command line
+gcloud compute instances get-serial-port-output instance-1
+	---If prompted, type N and press ENTER
+	*Repeat the command until you see the following in the command output, which tells you that the OS components have initialized and the Windows Server is ready to accept your RDP connection
+	---RDP into the Windows Server
+	---1.To set a password for logging into the RDP, run the following command in Cloud Shell. Be sure you replace [instance] with the VM Instance that you created, [zone] that you defined earlier and set [username] as admin
+gcloud compute reset-windows-password [instance] --zone [zone] --user [username]
+	---2.If asked Would you like to set or reset the password for [admin] (Y/n)?, enter Y.
+Y
+	---3.Connect to your server. There are different ways to connect to your server through RDP, depending on whether you are on Windows or not:
+	*If you are using a Chromebook or other machine at a Google Cloud event there is likely an RDP app already installed on the computer
+	*If you are not on Windows but using Chrome, you can connect to your server through RDP directly from the browser using the Spark View extension. Click on Add to Chrome. Then, click Launch app.
+	---4.Once launched, the Spark View (RDP) window opens. Use your Windows username admin and password you previously recorded in Step 2.
+	---5.Add your VM instance's External IP as your Domain. Click Connect to confirm you want to connect.
+
+
+
+--------------------------------------------------
+Set Up Network and HTTP Load Balancers
+https://www.cloudskillsboost.google/course_sessions/7147607/labs/423777
+--------------------------------------------------
+1. Set the default region and zone for all resources
+	---Set the default region
+gcloud config set compute/region us-west1
+	---set the default zone:
+gcloud config set compute/zone us-west1-c
+
+2. Create multiple web server instances
+	---Create a virtual machine www1 in your default zone using the following code
+	
+gcloud compute instances create www1 \
+    --zone=us-west1-c \
+    --tags=network-lb-tag \
+    --machine-type=e2-small \
+    --image-family=debian-11 \
+    --image-project=debian-cloud \
+    --metadata=startup-script='#!/bin/bash
+      apt-get update
+      apt-get install apache2 -y
+      service apache2 restart
+      echo "
+<h3>Web Server: www1</h3>" | tee /var/www/html/index.html'
+	
+	---Create a virtual machine www2 in your default zone using the following code
+gcloud compute instances create www2 \
+    --zone=us-west1-c \
+    --tags=network-lb-tag \
+    --machine-type=e2-small \
+    --image-family=debian-11 \
+    --image-project=debian-cloud \
+    --metadata=startup-script='#!/bin/bash
+      apt-get update
+      apt-get install apache2 -y
+      service apache2 restart
+      echo "
+<h3>Web Server: www2</h3>" | tee /var/www/html/index.html'
+
+	---Create a virtual machine www3 in your default zone
+gcloud compute instances create www3 \
+    --zone=us-west1-c  \
+    --tags=network-lb-tag \
+    --machine-type=e2-small \
+    --image-family=debian-11 \
+    --image-project=debian-cloud \
+    --metadata=startup-script='#!/bin/bash
+      apt-get update
+      apt-get install apache2 -y
+      service apache2 restart
+      echo "
+<h3>Web Server: www3</h3>" | tee /var/www/html/index.html'
+
+	---Create a firewall rule to allow external traffic to the VM instances
+gcloud compute firewall-rules create www-firewall-network-lb \
+    --target-tags network-lb-tag --allow tcp:80
+	
+	---Run the following to list your instances. You'll see their IP addresses in the EXTERNAL_IP column:
+gcloud compute instances list
+
+	---Verify that each instance is running with curl, replacing [IP_ADDRESS] with the IP address for each of your VMs
+	---語法curl http://[IP_ADDRESS]，查看剛剛的三筆結果(External_IP]
+curl http://35.197.110.203
+
+3. Configure the load balancing service
+	---Create a static external IP address for your load balancer
+gcloud compute addresses create network-lb-ip-1 \
+  --region us-west1
+	
+	---Add a legacy HTTP health check resource
+gcloud compute http-health-checks create basic-check
+	---Add a target pool in the same region as your instances. Run the following to create the target pool and use the health check, which is required for the service to function:
+gcloud compute target-pools create www-pool \
+  --region us-west1 --http-health-check basic-check
+	---Add the instances to the pool
+gcloud compute target-pools add-instances www-pool \
+    --instances www1,www2,www3
+	---Add a forwarding rule
+gcloud compute forwarding-rules create www-rule \
+    --region  us-west1 \
+    --ports 80 \
+    --address network-lb-ip-1 \
+    --target-pool www-pool
+
+	
+4. Sending traffic to your instances	
+	*Now that the load balancing service is configured, you can start sending traffic to the forwarding rule and watch the traffic be dispersed to different instances
+	---view the external IP address of the www-rule forwarding rule used by the load balancer
+gcloud compute forwarding-rules describe www-rule --region us-west1
+	---Access the external IP address
+IPADDRESS=$(gcloud compute forwarding-rules describe www-rule --region us-west1 --format="json" | jq -r .IPAddress)	
+	---Show the external IP address，(34.168.167.182)
+echo $IPADDRESS
+	---Use curl command to access the external IP address, replacing IP_ADDRESS with an external IP address from the previous command
+while true; do curl -m1 $IPADDRESS; done
+	---Ctrl + C to stop running the command
+	
+5. Create an HTTP load balancer	
+*HTTP(S) Load Balancing is implemented on Google Front End (GFE). GFEs are distributed globally and operate together using Google's global network and control plane. You can configure URL rules to route some URLs to one set of instances and route other URLs to other instances.
+*Requests are always routed to the instance group that is closest to the user, if that group has enough capacity and is appropriate for the request. If the closest group does not have enough capacity, the request is sent to the closest group that does have capacity.
+	---To set up a load balancer with a Compute Engine backend, your VMs need to be in an instance group. The managed instance group provides VMs running the backend servers of an external HTTP load balancer. For this lab, backends serve their own hostnames.
+	---create the load balancer template
+gcloud compute instance-templates create lb-backend-template \
+   --region=us-west1 \
+   --network=default \
+   --subnet=default \
+   --tags=allow-health-check \
+   --machine-type=e2-medium \
+   --image-family=debian-11 \
+   --image-project=debian-cloud \
+   --metadata=startup-script='#!/bin/bash
+     apt-get update
+     apt-get install apache2 -y
+     a2ensite default-ssl
+     a2enmod ssl
+     vm_hostname="$(curl -H "Metadata-Flavor:Google" \
+     http://169.254.169.254/computeMetadata/v1/instance/name)"
+     echo "Page served from: $vm_hostname" | \
+     tee /var/www/html/index.html
+     systemctl restart apache2'
+	---Create a managed instance group based on the template
+gcloud compute instance-groups managed create lb-backend-group \
+   --template=lb-backend-template --size=2 --zone=us-west1-c
+	---Create the fw-allow-health-check firewall rule
+gcloud compute firewall-rules create fw-allow-health-check \
+  --network=default \
+  --action=allow \
+  --direction=ingress \
+  --source-ranges=130.211.0.0/22,35.191.0.0/16 \
+  --target-tags=allow-health-check \
+  --rules=tcp:80
+	---Now that the instances are up and running, set up a global static external IP address that your customers use to reach your load balancer
+gcloud compute addresses create lb-ipv4-1 \
+  --ip-version=IPV4 \
+  --global
+	---Note the IPv4 address that was reserved:
+gcloud compute addresses describe lb-ipv4-1 \
+  --format="get(address)" \
+  --global
+	---Create a health check for the load balancer
+gcloud compute health-checks create http http-basic-check \
+  --port 80	
+	---Create a backend service:
+gcloud compute backend-services create web-backend-service \
+  --protocol=HTTP \
+  --port-name=http \
+  --health-checks=http-basic-check \
+  --global	
+	---Add your instance group as the backend to the backend service:
+gcloud compute backend-services add-backend web-backend-service \
+  --instance-group=lb-backend-group \
+  --instance-group-zone=us-west1-c \
+  --global	
+	---Create a URL map to route the incoming requests to the default backend service
+gcloud compute url-maps create web-map-http \
+    --default-service web-backend-service	
+	---Create a target HTTP proxy to route requests to your URL map
+gcloud compute target-http-proxies create http-lb-proxy \
+    --url-map web-map-http	
+	---Create a global forwarding rule to route incoming requests to the proxy:
+gcloud compute forwarding-rules create http-content-rule \
+   --address=lb-ipv4-1\
+   --global \
+   --target-http-proxy=http-lb-proxy \
+   --ports=80	
+	
+6. Testing traffic sent to your instances
+Network services --> Load balancing -->Click on the load balancer that you just created (web-map-http)
+	(Backend)click on the name of the backend and confirm that the VMs are Healthy.
+	---When the VMs are healthy, test the load balancer using a web browser, going to http://IP_ADDRESS/, replacing IP_ADDRESS with the load balancer's IP address.
+	---Your browser should render a page with content showing the name of the instance that served the page, along with its zone (for example, Page served from: lb-backend-group-xxxx).
+	
+	
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
